@@ -29,16 +29,18 @@ pipeline {
     stage('Build and Push Docker Image') {
       environment {
         DOCKER_IMAGE = "Anys9431/demo-java-app:${build_version}"
-        REGISTRY_CREDENTIALS = credentials('dockerhub')
+        // La fonction credentials() crée automatiquement les variables associées _USR et _PSW
+        REGISTRY_CREDS = credentials('dockerhub')
       }
       steps {
-        script {
-            sh 'cd demo-java-app && docker build -t ${DOCKER_IMAGE} .'
-            def dockerImage = docker.image("${DOCKER_IMAGE}")
-            docker.withRegistry('https://index.docker.io/v1/', "dockerhub") {
-                dockerImage.push()
-            }
-        }
+        // 1. Construire l'image Docker
+        sh 'cd demo-java-app && docker build -t ${DOCKER_IMAGE} .'
+        
+        // 2. Se connecter à Docker Hub de manière sécurisée (sans afficher le mot de passe dans les logs)
+        sh 'echo $REGISTRY_CREDS_PSW | docker login -u $REGISTRY_CREDS_USR --password-stdin'
+        
+        // 3. Pousser l'image sur le registre
+        sh 'docker push ${DOCKER_IMAGE}'
       }
     }
     stage('Update Deployment File') {
@@ -51,7 +53,7 @@ pipeline {
                 sh '''
                     git config user.email "anys.hadjidj@efrei.net"
                     git config user.name "Anys9431"
-                    sed -i "s/tag: .*/tag: \"${build_version}\"/" helm/app/values.yaml
+                    sed -i "s/tag: .*/tag: \\"${build_version}\\"/" helm/app/values.yaml
                     git add helm/app/values.yaml
                     git commit -m "Update deployment image to version ${build_version}"
                     git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
