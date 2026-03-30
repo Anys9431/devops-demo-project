@@ -28,7 +28,7 @@ pipeline {
     }
     stage('Build and Push Docker Image') {
       environment {
-        DOCKER_IMAGE = "Anys9431/demo-java-app:${build_version}"
+        DOCKER_IMAGE = "anys9431/demo-java-app:${build_version}"
         // La fonction credentials() crée automatiquement les variables associées _USR et _PSW
         REGISTRY_CREDS = credentials('dockerhub')
       }
